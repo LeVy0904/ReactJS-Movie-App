@@ -2,6 +2,8 @@ import React from "react";
 import Search from "./components/Search";
 import { Spinner } from "./components/Spinner";
 import { useState, useEffect } from "react";
+import { useDebounce } from "react-use";
+import MovieCard from "./components/MovieCard";
 
 const API_BASE_URL = "https://api.themoviedb.org/3";
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
@@ -18,13 +20,17 @@ const App = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const [moviesList, setMoviesList] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
-  const fetchMovies = async () => {
+  useDebounce(() => setDebouncedSearchTerm(searchTerm), 1000, [searchTerm]);
+  const fetchMovies = async (query = "") => {
     setIsLoading(true);
     setErrorMessage("");
 
     try {
-      const endpoint = `${API_BASE_URL}/discover/movie?sort_by=popularity.desc`;
+      const endpoint = query
+        ? `${API_BASE_URL}/search/movie?query=${encodeURIComponent(query)}`
+        : `${API_BASE_URL}/discover/movie?sort_by=popularity.desc`;
       const response = await fetch(endpoint, API_OPTIONS);
       if (!response.ok) {
         throw new Error("Failed to fetch movies");
@@ -42,8 +48,8 @@ const App = () => {
   };
 
   useEffect(() => {
-    fetchMovies();
-  }, []);
+    fetchMovies(debouncedSearchTerm);
+  }, [debouncedSearchTerm]);
 
   return (
     <main>
@@ -67,20 +73,7 @@ const App = () => {
           ) : (
             <ul>
               {moviesList.map((movie) => (
-                <li className="movie-card" key={movie.id}>
-                  {console.log(movie)}
-                  <img
-                    src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
-                    alt="Poster"
-                  />
-                  <h3 className="text-3xl text-center pt-1 text-white">
-                    {movie.title}
-                  </h3>
-                  <h2 className="rating">
-                    <img src="./star.svg" alt="Rating" />
-                    <span>{movie.vote_average}</span>
-                  </h2>
-                </li>
+                <MovieCard key={movie.id} movie={movie} />
               ))}
             </ul>
           )}
